@@ -1,9 +1,10 @@
 <!--
 SYNC IMPACT REPORT（同步影响报告）
 =================================
-Version change: (无 — 首次批准) → 1.0.0
-Bump rationale: MAJOR 基线。项目此前不存在宪法，本次为初始批准，
-  为全部后续 spec / plan / 代码变更建立有约束力的治理规则。
+Version change: 1.0.0 → 1.1.0
+Bump rationale: MINOR。实质性扩写既有章节：新增全局测试工具链要求
+  （单元测试统一 GoogleTest、性能测试统一 Google Benchmark），并相应
+  扩充原则 IV、原则 V 与质量门禁。无原则移除或重定义。
 
 已定义原则（Principles defined）:
   I.   gRPC 线协议兼容（不可妥协）
@@ -12,12 +13,17 @@ Bump rationale: MAJOR 基线。项目此前不存在宪法，本次为初始批�
   IV.  测试背书的变更（不可妥协）
   V.   依赖最小化且边界固定
 
-新增章节（Added sections）:
-  - 技术栈与兼容性约束
-  - 开发流程与质量门禁
-  - 治理（Governance）
+本次修改（Modified principles/sections）:
+  - IV. 测试背书的变更：新增 GoogleTest/Google Benchmark 强制要求
+       （标题不变）。
+  - V. 依赖最小化且边界固定：区分运行时依赖与开发/测试依赖，测试栈
+       纳入固定依赖边界（标题不变）。
+  - 技术栈与兼容性约束：新增测试栈条目。
+  - 开发流程与质量门禁：CI 与发布门禁纳入基准测试要求。
 
-移除章节（Removed sections）: 无（初始文档）。
+新增章节（Added sections）: 无。
+
+移除章节（Removed sections）: 无。
 
 模板解析说明（Template resolution note）:
   仓库中不存在 `.specify/scripts/bash/resolve-template.sh`（本仓库的
@@ -26,7 +32,7 @@ Bump rationale: MAJOR 基线。项目此前不存在宪法，本次为初始批�
   任何 project override / preset / extension 层需要叠加，因此核心模板
   即完整解析结果，未遗漏任何贡献层。
 
-后续 TODO（Follow-up TODOs）: 无。RATIFICATION_DATE 取初始批准日期
+后续 TODO（Follow-up TODOs）: 无。RATIFICATION_DATE 保留初始批准日期
   2026-09-08。建议另行补全 spec-kit init 以恢复本地模板与脚本。
 -->
 
@@ -86,26 +92,36 @@ urpc 将退化为另一个自成体系、无法互通的 RPC 系统。
 
 每一项行为变更必须由自动化测试背书；测试套件是硬性合入门禁。
 
+- 单元测试统一基于 GoogleTest（gtest 断言与 gmock 桩件）编写；禁止
+  引入第二套单元测试框架。
+- 性能测试统一基于 Google Benchmark；性能敏感路径（事件循环、HTTP/2
+  编解码、消息序列化、内存分配）必须附带基准用例，基准必须可重复
+  运行且可跨版本对比。
 - 单元测试覆盖组件行为，集成测试覆盖客户端/服务端交互，互操作测试
   覆盖与官方 gRPC 的对端通信；三类测试缺一不可。
 - 缺陷修复必须先提交可复现该缺陷的回归测试，再提交修复。
 - 测试门禁失败时禁止合入；禁止通过跳过或删除失败测试来"变绿"。
 
 **理由**：RPC 框架的正确性依赖协议细节与时序行为，人工审查无法替代
-可重复执行的验证；互操作测试同时是原则 I 的执法机制。
+可重复执行的验证；统一的测试与基准工具链保证结果可对比、可追溯，
+互操作测试同时是原则 I 的执法机制。
 
 ### V. 依赖最小化且边界固定
 
-第三方直接依赖集合固定为：libuv、nghttp2、upb（及其文档化的传递
-依赖）。
+第三方运行时依赖集合固定为：libuv、nghttp2、upb（及其文档化的传递
+依赖）；开发/测试依赖集合固定为：GoogleTest、Google Benchmark。
 
-- 未经宪法修订，禁止引入任何新的直接依赖；引入申请必须说明体积、
-  许可证、维护状态与跨平台支持情况。
+- 未经宪法修订，禁止引入任何新的直接依赖（运行时与开发/测试类别
+  均适用）；引入申请必须说明体积、许可证、维护状态与跨平台支持
+  情况。
+- 开发/测试依赖（GoogleTest、Google Benchmark）不得链接进或随同
+  发布任何运行时构件。
 - 依赖的引入方式（系统安装或源内 vendoring）与版本必须固定并经评审。
 - 能用既有依赖实现的功能，禁止为新功能引入新依赖。
 
 **理由**：依赖面即审计面与构建风险面；依赖膨胀会直接侵蚀跨平台能力
-（原则 III）与可部署性。
+（原则 III）与可部署性；测试栈独立成固定边界，既满足原则 IV 的工具
+链统一要求，又不污染运行时。
 
 ## 技术栈与兼容性约束
 
@@ -114,6 +130,8 @@ urpc 将退化为另一个自成体系、无法互通的 RPC 系统。
 - 构建系统：CMake 为唯一构建入口；标准配置通过 CMake presets 提供。
 - 运行时依赖：libuv（异步 I/O 事件循环）、nghttp2（HTTP/2）、
   upb（protobuf 运行时）。
+- 测试栈（仅开发/测试依赖，不进入运行时构件）：单元测试 GoogleTest
+  （gtest/gmock），性能测试 Google Benchmark。
 - 协议基线：gRPC over HTTP/2；协议行为以官方 gRPC 实现为参考基准。
 - 阶段范围：第一阶段仅支持 C++ 语言。Python、Lua 等多语言支持是现在
   的设计约束（见原则 II），不是现在的交付物。
@@ -123,8 +141,9 @@ urpc 将退化为另一个自成体系、无法互通的 RPC 系统。
 - 本项目采用 Spec Kit 规格驱动开发：`/speckit.specify` 与
   `/speckit.plan` 产出的每个工件必须包含宪法符合性检查
   （constitution check），逐条对照原则 I–V。
-- CI 必须在全部受支持平台与受支持编译器矩阵上执行构建与测试；矩阵
-  全绿是合入的必要条件。
+- CI 必须在全部受支持平台与受支持编译器矩阵上执行构建、GoogleTest
+  测试套件（单元/集成/互操作）与 Google Benchmark 基准；矩阵全绿是
+  合入的必要条件，基准结果必须留档以供跨版本对比。
 - 与官方 gRPC 的互操作测试套件是发布门禁；未通过互操作套件的版本
   禁止发布。
 - 变更说明（PR/commit）必须声明其触及的原则条目；评审人对原则符合性
@@ -143,4 +162,4 @@ urpc 将退化为另一个自成体系、无法互通的 RPC 系统。
   检查；原则 I 与原则 IV 标记为不可妥协（NON-NEGOTIABLE），违反即
   阻断合入。
 
-**Version**: 1.0.0 | **Ratified**: 2026-09-08 | **Last Amended**: 2026-09-08
+**Version**: 1.1.0 | **Ratified**: 2026-09-08 | **Last Amended**: 2026-09-08
