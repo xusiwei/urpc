@@ -22,6 +22,11 @@ gRPC，违反依赖边界）；不定数值仅留基线（被否：无法阻断�
 
 ## 2. 依赖引入与版本固定
 
+> **⚠️ SUPERSEDED**（2026-09-10）：本节的「find_package 优先 + FetchContent
+> 固定 tag」方案已被 specs/002-vendor-third-party 取代——依赖统一以
+> 固定版本源码下载到 `third_party/`（SHA256 锚定、配置期零网络）。
+> 下列内容仅作历史决策记录保留。
+
 **Decision**: 顶层 CMake 统一封装 `urpc::` 依赖宏（优先
 `find_package`，缺失则 FetchContent 固定 tag）：
 libuv ≥1.46、nghttp2 ≥1.62、protobuf（upb 子集）固定实现期最新

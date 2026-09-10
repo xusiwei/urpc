@@ -54,3 +54,30 @@ endif()
 if(URPC_BUILD_BENCH AND BUILD_TESTING)
   # benches are registered by libs/core
 endif()
+
+# ---------------------------------------------------------------------------
+# vendored third-party guard tests (spec 002-vendor-third-party)
+# ---------------------------------------------------------------------------
+if(BUILD_TESTING)
+  add_test(NAME vendor-third-party-idempotent
+    COMMAND ${CMAKE_COMMAND}
+            -DURPC_TP_CHECK_ONLY=ON
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/fetch_third_party.cmake)
+  set_tests_properties(vendor-third-party-idempotent PROPERTIES LABELS vendor)
+
+  add_test(NAME vendor-build-guard
+    COMMAND ${CMAKE_COMMAND}
+            -DCMAKE_GENERATOR=${CMAKE_GENERATOR}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/test/build_guard.cmake)
+  set_tests_properties(vendor-build-guard PROPERTIES LABELS vendor)
+
+  add_test(NAME vendor-single-source
+    COMMAND ${CMAKE_COMMAND}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/test/single_source.cmake)
+  set_tests_properties(vendor-single-source PROPERTIES LABELS vendor)
+
+  add_test(NAME vendor-directory-set
+    COMMAND ${CMAKE_COMMAND}
+            -P ${CMAKE_CURRENT_SOURCE_DIR}/tools/test/directory_set.cmake)
+  set_tests_properties(vendor-directory-set PROPERTIES LABELS vendor)
+endif()

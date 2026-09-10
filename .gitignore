@@ -49,5 +49,10 @@ __pycache__/
 .venv/
 venv/
 
+# Vendored third-party sources (work product; manifest + README stay tracked)
+third_party/*
+!third_party/versions.cmake
+!third_party/README.md
+
 # Benchmark baselines are tracked; scratch outputs are not
 tools/scratch/
