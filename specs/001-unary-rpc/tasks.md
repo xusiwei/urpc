@@ -33,14 +33,14 @@ data-model.md, contracts/（server-api / client-api / wire-protocol / logging）
 
 **Purpose**: 工程骨架与依赖引入
 
-- [ ] T001 创建顶层构建骨架：`CMakeLists.txt`（项目定义、选项
+- [x] T001 创建顶层构建骨架：`CMakeLists.txt`（项目定义、选项
       `URPC_BUILD_TESTS/URPC_BUILD_BENCH/URPC_BUILD_EXAMPLES`、
       `URPC_WERROR`）、`CMakePresets.json`（debug/release ×
       Linux/macOS/Windows 预设，及 verify/bench/interop 测试预设）
-- [ ] T002 [P] 创建依赖封装 `cmake/urpc-deps.cmake`：find_package 优先、
+- [x] T002 [P] 创建依赖封装 `cmake/urpc-deps.cmake`：find_package 优先、
       缺失时 FetchContent 固定 tag 引入 libuv(≥1.46)/nghttp2(≥1.62)/
       protobuf(upb)/GoogleTest(≥1.14)/benchmark(≥1.8)，版本单点声明
-- [ ] T003 [P] 创建目录骨架与占位：`libs/core`、`libs/cabi`、`libs/api`
+- [x] T003 [P] 创建目录骨架与占位：`libs/core`、`libs/cabi`、`libs/api`
       （各含 `include/`、`source/`、`test/`，core 含 `bench/`）、
       `interop/python/`、`examples/echo/`、`tools/`、`bindings/README.md`
       （阶段二占位说明）、`docs/`

@@ -1,69 +1,53 @@
-# Prerequisites
-*.d
+# Build
+build/
+build-*/
+out/
+dist/
 
-# Compiled Object files
+# C/C++ artifacts
+*.d
 *.slo
 *.lo
 *.o
 *.obj
-
-# Precompiled Headers
 *.gch
 *.pch
-
-# Linker files
 *.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-*.so.*
-
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
 *.a
 *.lib
-
-# Executables
+*.so
+*.so.*
+*.dylib
+*.dll
 *.exe
-*.out
-*.app
+*.pdb
 
-# Build directories
-build/
-Build/
-build-*/
-
-# CMake generated files
+# CMake
 CMakeFiles/
 CMakeCache.txt
 cmake_install.cmake
-Makefile
+_deps/
 install_manifest.txt
-compile_commands.json
 
-# Temporary files
-*.tmp
-*.log
-*.bak
+# IDE / editor
+.idea/
+.vscode/
+.vs/
 *.swp
 
-# vcpkg
-vcpkg_installed/
+# Logs / local env
+*.log
+.env*
 
-# debug information files
-*.dwo
+# OS
+.DS_Store
+Thumbs.db
 
-# test output & cache
-Testing/
-.cache/
+# Python (interop tooling)
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Benchmark baselines are tracked; scratch outputs are not
+tools/scratch/
