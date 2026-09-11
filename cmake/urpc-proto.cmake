@@ -17,11 +17,16 @@ function(urpc_proto_upb)
   set(gen_h "${ARG_OUT_DIR}/${proto_name_we}.upb.h")
   set(gen_c "${ARG_OUT_DIR}/${proto_name_we}.upb.c")
 
-  add_custom_command(OUTPUT "${gen_h}" "${gen_c}"
+  set(gen_mt_h "${ARG_OUT_DIR}/${proto_name_we}.upb_minitable.h")
+  set(gen_mt_c "${ARG_OUT_DIR}/${proto_name_we}.upb_minitable.c")
+  add_custom_command(OUTPUT "${gen_h}" "${gen_c}" "${gen_mt_h}" "${gen_mt_c}"
     COMMAND ${CMAKE_COMMAND} -E make_directory "${ARG_OUT_DIR}"
     COMMAND "${URPC_PROTOC_EXECUTABLE}"
+            "--plugin=protoc-gen-upb=${URPC_PROTOC_PLUGIN_UPB}"
+            "--plugin=protoc-gen-upb_minitable=${URPC_PROTOC_PLUGIN_MINITABLE}"
             "--proto_path=${ARG_IMPORT_DIR}"
             "--upb_out=${ARG_OUT_DIR}"
+            "--upb_minitable_out=${ARG_OUT_DIR}"
             "${proto_abs}"
     DEPENDS "${proto_abs}" ${URPC_PROTOC_TARGET}
     COMMENT "urpc: upb codegen ${proto_name_we}.proto"

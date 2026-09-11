@@ -1,5 +1,6 @@
 add_library(urpc_cabi
   source/version.c
+  source/urpc_c_status.c
 )
 
 target_include_directories(urpc_cabi PUBLIC include)

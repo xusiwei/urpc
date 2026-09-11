@@ -34,6 +34,7 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CTest)
 include(urpc-deps)
+include(urpc-proto)
 
 add_subdirectory(libs/core)
 add_subdirectory(libs/cabi)

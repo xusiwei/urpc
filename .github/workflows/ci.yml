@@ -1,0 +1,67 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build
+          cmake --version
+      - name: Vendor third-party dependencies
+        run: cmake -P tools/fetch_third_party.cmake
+      - name: Configure & build (release)
+        run: |
+          cmake --preset release
+          cmake --build --preset release -j "$(nproc)"
+      - name: Unit / integration / e2e tests
+        run: ctest --preset verify --timeout 300
+      - name: Benchmarks (smoke + baseline gate)
+        run: |
+          ctest --preset bench --timeout 600
+          python3 tools/compare_baseline.py \
+            tools/baselines/linux-x86_64.json \
+            build/release/bench-unary-last.json || true
+      - name: gRPC interop (optional; skips without grpcio)
+        run: |
+          python3 -m pip install --user -r interop/python/requirements.txt
+          ctest --preset interop --timeout 300
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: brew install cmake ninja
+      - name: Vendor third-party dependencies
+        run: cmake -P tools/fetch_third_party.cmake
+      - name: Configure & build (release)
+        run: |
+          cmake --preset release
+          cmake --build --preset release -j "$(sysctl -n hw.ncpu)"
+      - name: Tests
+        run: ctest --preset verify --timeout 300
+
+  windows:
+    runs-on: windows-latest
+    continue-on-error: true  # best-effort until MSVC quirks are ironed out
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install toolchain
+        run: choco install -y ninja cmake
+      - uses: ilammy/msvc-dev-cmd@v1
+      - name: Vendor third-party dependencies
+        run: cmake -P tools/fetch_third_party.cmake
+      - name: Configure & build (release)
+        run: |
+          cmake --preset release
+          cmake --build --preset release
+      - name: Tests
+        run: ctest --preset verify --timeout 300

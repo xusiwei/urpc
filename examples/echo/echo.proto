@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+package example;
+
+// Shared by the C++ example (upb codegen), the api-layer tests and the
+// gRPC Python interop peers (grpc_tools codegen).
+service EchoService {
+  rpc Echo(EchoRequest) returns (EchoResponse);
+  // Deliberately slow method for deadline/cancellation tests: server sleeps
+  // before answering (test-only service method).
+  rpc SlowEcho(EchoRequest) returns (EchoResponse);
+}
+
+message EchoRequest {
+  string text = 1;
+}
+
+message EchoResponse {
+  string text = 1;
+}

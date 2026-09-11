@@ -11,6 +11,12 @@
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/third_party/versions.cmake")
 
+# urpc consumes all third-party code as static archives (embeddable builds;
+# also avoids non-PIC clashes when third-party subprojects flip
+# BUILD_SHARED_LIBS). Override locally if you know what you are doing.
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+set(BUILD_STATIC_LIBS ON CACHE BOOL "" FORCE)
+
 # ---------------------------------------------------------------------------
 # guard: a dependency is "vendored" iff its marker matches the manifest
 # ---------------------------------------------------------------------------
@@ -100,60 +106,37 @@ target_compile_options(urpc_upb PRIVATE
 # use a usable system protoc when present, otherwise build from vendored
 # source (protobuf + its pinned abseil). No downloads in either path.
 # ---------------------------------------------------------------------------
-function(_urpc_protoc_version PROTOC_BIN OUT_VAR)
-  execute_process(COMMAND "${PROTOC_BIN}" --version
-    OUTPUT_VARIABLE ver OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET RESULT_VARIABLE rc)
-  if(NOT rc EQUAL 0)
-    set(${OUT_VAR} 0 PARENT_SCOPE)
-    return()
-  endif()
-  string(REGEX MATCH "[0-9]+\\.[0-9]+(\\.[0-9]+)?" num "${ver}")
-  string(REGEX MATCH "^[0-9]+" major "${num}")
-  set(${OUT_VAR} "${major}" PARENT_SCOPE)
-endfunction()
+# Host protoc + upb generator plugins are always built from the vendored
+# protobuf source (spec 002: single vendored source of truth; official
+# protoc distributions ship --upb_out as plugins anyway).
+urpc_tp_require(abseil)
+set(ABSL_ENABLE_TESTING OFF CACHE INTERNAL "")
+set(ABSL_PROPAGATE_CXX_STD ON CACHE INTERNAL "")
+set(ABSL_BUILD_MONOLITHIC_CPP_LIB OFF CACHE INTERNAL "")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil"
+                 "${CMAKE_BINARY_DIR}/third_party/abseil")
 
-if(URPC_PROTOC_EXECUTABLE AND NOT URPC_PROTOC_EXECUTABLE MATCHES "^\\\$<TARGET_FILE" AND NOT EXISTS "${URPC_PROTOC_EXECUTABLE}")
-  unset(URPC_PROTOC_EXECUTABLE CACHE)
-endif()
-if(NOT URPC_PROTOC_EXECUTABLE)
-  find_program(URPC_SYSTEM_PROTOC protoc)
-  set(URPC_PROTOC_MAJOR 0)
-  if(URPC_SYSTEM_PROTOC)
-    _urpc_protoc_version("${URPC_SYSTEM_PROTOC}" URPC_PROTOC_MAJOR)
-  endif()
-  if(URPC_PROTOC_MAJOR GREATER_EQUAL 23)
-    set(URPC_PROTOC_EXECUTABLE "${URPC_SYSTEM_PROTOC}" CACHE FILEPATH
-        "protoc used for --upb_out generation")
-  else()
-    # build host protoc in-tree from vendored sources; protobuf's cmake
-    # reuses pre-existing absl:: targets (its cmake/abseil-cpp.cmake)
-    urpc_tp_require(abseil)
-    set(ABSL_ENABLE_TESTING OFF CACHE INTERNAL "")
-    set(ABSL_PROPAGATE_CXX_STD ON CACHE INTERNAL "")
-    set(ABSL_BUILD_MONOLITHIC_CPP_LIB OFF CACHE INTERNAL "")
-    add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil"
-                     "${CMAKE_BINARY_DIR}/third_party/abseil")
-
-    set(protobuf_INSTALL OFF CACHE INTERNAL "")
-    set(protobuf_BUILD_TESTS OFF CACHE INTERNAL "")
-    set(protobuf_BUILD_CONFORMANCE OFF CACHE INTERNAL "")
-    set(protobuf_BUILD_EXAMPLES OFF CACHE INTERNAL "")
-    set(protobuf_BUILD_LIBUPB OFF CACHE INTERNAL "")  # we build our own subset
-    set(protobuf_DISABLE_RTTI ON CACHE INTERNAL "")
-    set(protobuf_WITH_ZLIB OFF CACHE INTERNAL "")
-    set(protobuf_BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
-    set(utf8_range_ENABLE_TESTS OFF CACHE INTERNAL "")
-    set(utf8_range_ENABLE_INSTALL OFF CACHE INTERNAL "")
-    add_subdirectory("${URPC_PROTOBUF_DIR}"
-                     "${CMAKE_BINARY_DIR}/third_party/protobuf"
-                     EXCLUDE_FROM_ALL)
-    set(URPC_PROTOC_EXECUTABLE "$<TARGET_FILE:protoc>" CACHE STRING
-        "protoc used for --upb_out generation (generator expression)")
-    set(URPC_PROTOC_TARGET protoc)
-    message(STATUS "urpc: system protoc unusable for --upb_out; building host protoc from third_party/protobuf")
-  endif()
-endif()
+set(protobuf_INSTALL OFF CACHE INTERNAL "")
+set(protobuf_BUILD_TESTS OFF CACHE INTERNAL "")
+set(protobuf_BUILD_CONFORMANCE OFF CACHE INTERNAL "")
+set(protobuf_BUILD_EXAMPLES OFF CACHE INTERNAL "")
+set(protobuf_BUILD_LIBUPB ON CACHE INTERNAL "")  # builds the upb codegen plugins
+set(protobuf_DISABLE_RTTI ON CACHE INTERNAL "")
+set(protobuf_WITH_ZLIB OFF CACHE INTERNAL "")
+set(protobuf_BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+set(utf8_range_ENABLE_TESTS OFF CACHE INTERNAL "")
+set(utf8_range_ENABLE_INSTALL OFF CACHE INTERNAL "")
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party/protobuf"
+                 "${CMAKE_BINARY_DIR}/third_party/protobuf"
+                 EXCLUDE_FROM_ALL)
+set(URPC_PROTOC_EXECUTABLE "$<TARGET_FILE:protoc>" CACHE STRING
+    "protoc used for code generation (generator expression)")
+set(URPC_PROTOC_PLUGIN_UPB "$<TARGET_FILE:protoc-gen-upb>" CACHE STRING
+    "protoc-gen-upb plugin (generator expression)")
+set(URPC_PROTOC_PLUGIN_MINITABLE "$<TARGET_FILE:protoc-gen-upb_minitable>"
+    CACHE STRING "protoc-gen-upb_minitable plugin (generator expression)")
+set(URPC_PROTOC_TARGET protoc)
+message(STATUS "urpc: host protoc + upb generators build from third_party/protobuf")
 
 # ---------------------------------------------------------------------------
 # GoogleTest / Google Benchmark (dev+test only; never in runtime artifacts)

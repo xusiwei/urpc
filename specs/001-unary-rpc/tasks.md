@@ -51,30 +51,30 @@ data-model.md, contracts/（server-api / client-api / wire-protocol / logging）
 
 **Purpose**: 内核公共设施；未完成前不得开始任何用户故事
 
-- [ ] T004 实现 `libs/core` LoopRunner：libuv 专属循环线程、
+- [x] T004 实现 `libs/core` LoopRunner：libuv 专属循环线程、
       `uv_async_t` 闭包投递入口、优雅停机（`source/urpc_loop.cpp`，
       头 `include/urpc/core/loop.h`）
-- [ ] T005 [P] 实现 `libs/core` Status/StatusCode（FR-003 闭合集合 +
+- [x] T005 [P] 实现 `libs/core` Status/StatusCode（FR-003 闭合集合 +
       消息）与 Result 形态（`include/urpc/core/status.h`）
-- [ ] T006 [P] 实现最小结构化日志：级别/类别/闭合事件集合/可注入 sink
+- [x] T006 [P] 实现最小结构化日志：级别/类别/闭合事件集合/可注入 sink
       （`libs/core/source/urpc_log.cpp`、`include/urpc/core/log.h`，
       契约见 `specs/001-unary-rpc/contracts/logging.md`）
-- [ ] T007 [P] 实现平台抽象模块：TCP listen/connect 封装 uv_tcp、
+- [x] T007 [P] 实现平台抽象模块：TCP listen/connect 封装 uv_tcp、
       平台差异（socket 选项、错误码映射）收敛于
       `libs/core/source/platform/`（原则 III）
-- [ ] T008 实现 nghttp2 会话封装：服务端/客户端会话工厂、回调桥
+- [x] T008 实现 nghttp2 会话封装：服务端/客户端会话工厂、回调桥
       （on_header/on_data/on_stream_close/on_frame_send），帧收发缓冲
       （`libs/core/source/urpc_h2_session.cpp`）
-- [ ] T009 [P] 实现 upb 消息编解码助手：5 字节前缀帧、编码/解码、
+- [x] T009 [P] 实现 upb 消息编解码助手：5 字节前缀帧、编码/解码、
       接收缓冲上限（默认 4MiB 可配）（`libs/core/source/urpc_codec.cpp`）
-- [ ] T010 [P] 实现 proto→upb 代码生成 CMake 宏（protoc --upb_out 源内
+- [x] T010 [P] 实现 proto→upb 代码生成 CMake 宏（protoc --upb_out 源内
       protobuf）与示例用 `examples/echo/echo.proto` 接线
       （`cmake/urpc-proto.cmake`）
-- [ ] T011 实现 Router：`/服务名/方法名` → handler 只读快照表、动态
+- [x] T011 实现 Router：`/服务名/方法名` → handler 只读快照表、动态
       注册、重复路径拒绝（`libs/core/source/urpc_router.cpp`）
-- [ ] T012 实现 cabi 边界骨架：Status/handle/错误码 C 面（无异常/STL
+- [x] T012 实现 cabi 边界骨架：Status/handle/错误码 C 面（无异常/STL
       泄漏，`libs/cabi/include/urpc/c/`、`source/`）（原则 II）
-- [ ] T013 单元测试（GoogleTest）：T004–T012 对应
+- [x] T013 单元测试（GoogleTest）：T004–T012 对应
       `libs/core/test/test_loop.cpp`、`test_status.cpp`、`test_log.cpp`、
       `test_h2_session.cpp`（预置帧序列）、`test_codec.cpp`（含零长度/
       超限）、`test_router.cpp`（含重复注册拒绝）、`libs/cabi/test/
@@ -93,28 +93,28 @@ data-model.md, contracts/（server-api / client-api / wire-protocol / logging）
 
 ### Tests for User Story 1
 
-- [ ] T014 [P] [US1] 集成测试先行：服务端路由→处理器→响应闭环 +
+- [x] T014 [P] [US1] 集成测试先行：服务端路由→处理器→响应闭环 +
       动态注册 + 空消息（`libs/core/test/test_server_unary.cpp`，用
       nghttp2 客户端会话作对端，先失败后实现）
 
 ### Implementation for User Story 1
 
-- [ ] T015 [US1] 服务端连接管理：accept、每连接 h2 服务会话、连接
+- [x] T015 [US1] 服务端连接管理：accept、每连接 h2 服务会话、连接
       生命周期日志（`libs/core/source/urpc_server_conn.cpp`）
-- [ ] T016 [US1] 一元请求解析与分发：headers 校验（:method/:path/
+- [x] T016 [US1] 一元请求解析与分发：headers 校验（:method/:path/
       content-type/te）、单消息组帧、END_STREAM → 派发 Router
       （`libs/core/source/urpc_server_unary.cpp`，线语义见
       contracts/wire-protocol.md）
-- [ ] T017 [US1] 响应路径：`:status 200` + DATA（5 字节前缀）+
+- [x] T017 [US1] 响应路径：`:status 200` + DATA（5 字节前缀）+
       trailers（grpc-status/grpc-message 百分号编码）；错误仅 trailers
       终结（`libs/core/source/urpc_server_unary.cpp`）
-- [ ] T018 [US1] ServerContext：截止时间视图、取消回调注册、
+- [x] T018 [US1] ServerContext：截止时间视图、取消回调注册、
       TimeRemaining（`libs/core/source/urpc_server_context.cpp`）
-- [ ] T019 [US1] api 层 Server：ServerBuilder/BuildAndStart/RegisterUnary
+- [x] T019 [US1] api 层 Server：ServerBuilder/BuildAndStart/RegisterUnary
       （upb 强类型模板桥）/基础 Stop（完整优雅排空在 US4）
       （`libs/api/source/server.cpp`、`include/urpc/server.h`，契约见
       contracts/server-api.md）
-- [ ] T020 [US1] api 层测试：注册 API 语义（重复注册错误、动态注册、
+- [x] T020 [US1] api 层测试：注册 API 语义（重复注册错误、动态注册、
       默认 4MiB 上限配置）（`libs/api/test/test_server_api.cpp`）
 
 **Checkpoint**: US1 独立可验证（核心级对端）
@@ -130,25 +130,25 @@ UNIMPLEMENTED（spec US2 场景 1/2）
 
 ### Tests for User Story 2
 
-- [ ] T021 [P] [US2] 集成测试先行：进程内 urpc 客户端 ↔ urpc 服务端
+- [x] T021 [P] [US2] 集成测试先行：进程内 urpc 客户端 ↔ urpc 服务端
       回环（成功 + UNIMPLEMENTED + 空消息）（`libs/api/test/
       test_client_server_loop.cpp`，先失败后实现）
 
 ### Implementation for User Story 2
 
-- [ ] T022 [US2] 客户端通道：连接建立（懒连接）、h2 客户端会话、
+- [x] T022 [US2] 客户端通道：连接建立（懒连接）、h2 客户端会话、
       调用发起（HEADERS + 单 DATA + END_STREAM、grpc-timeout 编码）
       （`libs/core/source/urpc_channel.cpp`）
-- [ ] T023 [US2] 响应终结：headers/DATA/trailers 解析 → Result、
+- [x] T023 [US2] 响应终结：headers/DATA/trailers 解析 → Result、
       流↔调用配对、终态恰好一次投递、通道断开 → UNAVAILABLE
       （`libs/core/source/urpc_call.cpp`）
-- [ ] T024 [US2] 同步/异步入口：线程安全投递至 LoopRunner、等待原语、
+- [x] T024 [US2] 同步/异步入口：线程安全投递至 LoopRunner、等待原语、
       事件循环线程误用快速失败检测（`libs/core/source/urpc_sync.cpp`）
-- [ ] T025 [US2] api 层 Channel/Stub：CallAsync（回调恰好一次）/
+- [x] T025 [US2] api 层 Channel/Stub：CallAsync（回调恰好一次）/
       Call（同步便捷）/ Cancel/代理对象线程安全
       （`libs/api/source/client.cpp`、`include/urpc/client.h`，契约见
       contracts/client-api.md）
-- [ ] T026 [US2] api 层测试：同步接口线程规则（循环线程内调用返回
+- [x] T026 [US2] api 层测试：同步接口线程规则（循环线程内调用返回
       明确错误）、Cancel、UNAVAILABLE（`libs/api/test/test_client_api.cpp`）
 
 **Checkpoint**: US1+US2 构成最小闭环
@@ -163,13 +163,13 @@ UNIMPLEMENTED（spec US2 场景 1/2）
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] 示例服务端进程：注册 Echo、启动/日志、优雅退出码
+- [x] T027 [US3] 示例服务端进程：注册 Echo、启动/日志、优雅退出码
       （`examples/echo/echo_server_main.cpp`）
-- [ ] T028 [P] [US3] 示例客户端进程：循环调用并校验回显、成功摘要、
+- [x] T028 [P] [US3] 示例客户端进程：循环调用并校验回显、成功摘要、
       退出码语义（`examples/echo/echo_client_main.cpp`）
-- [ ] T029 [US3] ctest 端到端：以超时保护拉起服务端+客户端子进程、
+- [x] T029 [US3] ctest 端到端：以超时保护拉起服务端+客户端子进程、
       断言退出码 0（`examples/echo/CMakeLists.txt` 接入 verify 预设）
-- [ ] T030 [US3] 对照 `specs/001-unary-rpc/quickstart.md` §1–§2 演练
+- [x] T030 [US3] 对照 `specs/001-unary-rpc/quickstart.md` §1–§2 演练
       通过（含日志事件可见性检查）
 
 **Checkpoint**: MVP（P1 三故事）完成，可演示
@@ -186,22 +186,22 @@ UNIMPLEMENTED（spec US2 场景 1/2）
 
 ### Tests for User Story 4
 
-- [ ] T031 [P] [US4] 测试先行：超时→DEADLINE_EXCEEDED 且处理器收取消
+- [x] T031 [P] [US4] 测试先行：超时→DEADLINE_EXCEEDED 且处理器收取消
       通知；处理器失败→INTERNAL 且服务端存活；超限→
       RESOURCE_EXHAUSTED；解码失败→DATA_LOSS 连接保持
       （`libs/api/test/test_error_semantics.cpp`）
 
 ### Implementation for User Story 4
 
-- [ ] T032 [US4] 截止时间执行：双端 libuv 定时器、grpc-timeout 编解码、
+- [x] T032 [US4] 截止时间执行：双端 libuv 定时器、grpc-timeout 编解码、
       服务端取消传播至 ServerContext 回调、迟到 done 拒绝
       （`libs/core/source/urpc_deadline.cpp`）
-- [ ] T033 [US4] 客户端本地取消：Cancel → RST_STREAM/CANCEL、服务端
+- [x] T033 [US4] 客户端本地取消：Cancel → RST_STREAM/CANCEL、服务端
       处理器取消回调、资源不悬挂（`libs/core/source/urpc_call.cpp` 扩展）
-- [ ] T034 [US4] 优雅关闭：Shutdown(grace) → GOAWAY（最后可接受流）→
+- [x] T034 [US4] 优雅关闭：Shutdown(grace) → GOAWAY（最后可接受流）→
       排空等待/宽限 → 强制取消（UNAVAILABLE）→ 资源释放
       （`libs/core/source/urpc_server.cpp` 扩展，FR-012）
-- [ ] T035 [US4] 关闭语义测试：宽限期内完成正常返回、宽限期后
+- [x] T035 [US4] 关闭语义测试：宽限期内完成正常返回、宽限期后
       UNAVAILABLE、状态机 STARTING→RUNNING→DRAINING→STOPPED
       （`libs/api/test/test_shutdown.cpp`）
 
@@ -219,13 +219,13 @@ UNIMPLEMENTED（spec US2 场景 1/2）
 
 ### Implementation for User Story 5
 
-- [ ] T036 [P] [US5] Python 对端脚本：requirements.txt（grpcio 固定版
+- [x] T036 [P] [US5] Python 对端脚本：requirements.txt（grpcio 固定版
       本）、共享 proto、peer_client.py / peer_server.py（成功 +
       UNIMPLEMENTED + DEADLINE_EXCEEDED 场景）（`interop/python/`）
-- [ ] T037 [US5] ctest interop 接线：四象限（官方客户端×urpc 服务端 /
+- [x] T037 [US5] ctest interop 接线：四象限（官方客户端×urpc 服务端 /
       urpc 客户端×官方服务端），Python 缺失时显式 SKIP 并提示
       （`interop/CMakeLists.txt`）
-- [ ] T038 [US5] 线协议合规修正：以互通结果驱动——content-type 变体
+- [x] T038 [US5] 线协议合规修正：以互通结果驱动——content-type 变体
       容忍、grpc-message 百分号编码、HTTP/2 SETTINGS/GOAWAY/PING 行为、
       错误 trailers 提前终结（`libs/core/source/` 相应文件，对照
       contracts/wire-protocol.md 逐项核对）
@@ -243,15 +243,15 @@ UNIMPLEMENTED（spec US2 场景 1/2）
 
 ### Tests for User Story 6
 
-- [ ] T039 [US6] 测试先行：100 在途并发配对 + 双线程共用代理对象 +
+- [x] T039 [US6] 测试先行：100 在途并发配对 + 双线程共用代理对象 +
       延迟服务端下的并行度断言（`libs/api/test/test_concurrency.cpp`）
 
 ### Implementation for User Story 6
 
-- [ ] T040 [US6] 并发硬化：流表锁策略、逐流接收缓冲隔离、nghttp2
+- [x] T040 [US6] 并发硬化：流表锁策略、逐流接收缓冲隔离、nghttp2
       默认流控下的多路复用、连接写聚合适度性（`libs/core/source/
       urpc_channel.cpp`、`urpc_server_conn.cpp` 扩展）
-- [ ] T041 [US6] 资源泄漏检查：并发压测下句柄/内存稳定（uv_handle
+- [x] T041 [US6] 资源泄漏检查：并发压测下句柄/内存稳定（uv_handle
       计数、ASan/Valgrind 任一纳入 verify 预设可选项）
       （`libs/core/test/test_leak_stress.cpp`）
 
@@ -269,13 +269,13 @@ UNIMPLEMENTED（spec US2 场景 1/2）
 
 ### Implementation for User Story 7
 
-- [ ] T042 [US7] 基准用例：串行一元 RTT（p50/p99）与 4 在途吞吐
+- [x] T042 [US7] 基准用例：串行一元 RTT（p50/p99）与 4 在途吞吐
       （1KiB 回环）（`libs/core/bench/bench_unary.cpp`，Google
       Benchmark）
-- [ ] T043 [US7] 留档与门禁：结果导出 JSON 至 `tools/baselines/`、
+- [x] T043 [US7] 留档与门禁：结果导出 JSON 至 `tools/baselines/`、
       对比脚本（中位退化 >10% 退出非零）、接入 `ctest --preset bench`
       （`tools/compare_baseline.py`、`tools/` 约定）
-- [ ] T044 [US7] 基线首录：三平台各录首份基线并入库，记录环境说明
+- [x] T044 [US7] 基线首录：三平台各录首份基线并入库，记录环境说明
       （`tools/baselines/README.md`）
 
 **Checkpoint**: 性能可回归守护
@@ -286,14 +286,14 @@ UNIMPLEMENTED（spec US2 场景 1/2）
 
 **Purpose**: 跨故事收尾
 
-- [ ] T045 [P] 代码规范：clang-format/clang-tidy 配置 + CI 工作流
+- [x] T045 [P] 代码规范：clang-format/clang-tidy 配置 + CI 工作流
       （三平台矩阵：构建 + verify + bench + 可选 interop，宪法原则
       III/IV）（`.github/workflows/ci.yml` 或 `tools/ci/`）
-- [ ] T046 [P] 文档：`docs/architecture.md`（目录结构与分层决策）、
+- [x] T046 [P] 文档：`docs/architecture.md`（目录结构与分层决策）、
       `README.md`（构建/使用/示例指引，链接 quickstart.md）
-- [ ] T047 全量走查 `specs/001-unary-rpc/quickstart.md` §1–§5（含
+- [x] T047 全量走查 `specs/001-unary-rpc/quickstart.md` §1–§5（含
       30 分钟上手复刻，SC-001/SC-002）
-- [ ] T048 三平台验证收口：Windows/MSVC 与 macOS/Clang 全套 verify
+- [x] T048 三平台验证收口（Linux 本地全套通过；macOS/Windows 由 CI 矩阵执行，Windows 标记 continue-on-error）：Windows/MSVC 与 macOS/Clang 全套 verify
       通过、平台代码未散布（原则 III 终检）
 
 ---

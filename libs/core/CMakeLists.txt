@@ -1,10 +1,19 @@
 add_library(urpc_core
   source/version.cpp
+  source/urpc_status.cpp
+  source/urpc_log.cpp
+  source/urpc_loop.cpp
+  source/urpc_codec.cpp
+  source/urpc_router.cpp
+  source/urpc_h2_session.cpp
+  source/urpc_server.cpp
+  source/urpc_channel.cpp
+  source/platform/urpc_platform.cpp
 )
 
 target_include_directories(urpc_core PUBLIC include)
 target_link_libraries(urpc_core
-  PRIVATE ${URPC_LIBUV_TARGET}
+  PUBLIC ${URPC_LIBUV_TARGET}
   PRIVATE ${URPC_NGHTTP2_TARGET}
   PRIVATE urpc_upb
 )
@@ -14,6 +23,8 @@ if(BUILD_TESTING AND URPC_BUILD_TESTS)
   if(URPC_CORE_TESTS)
     add_executable(urpc_core_tests ${URPC_CORE_TESTS})
     target_link_libraries(urpc_core_tests PRIVATE urpc_core GTest::gtest GTest::gtest_main)
+    # wire-protocol tests need raw HTTP/2 error codes (test-only linkage)
+    target_link_libraries(urpc_core_tests PRIVATE ${URPC_NGHTTP2_TARGET})
     add_test(NAME urpc-core COMMAND urpc_core_tests)
   endif()
 endif()
