@@ -164,7 +164,9 @@ H2Session::~H2Session() {
 void H2Session::Consume(const uint8_t* data, size_t len) {
   nghttp2_ssize rc = nghttp2_session_mem_recv2(impl_->session, data, len);
   if (getenv("URPC_H2_DEBUG")) {
-    fprintf(stderr, "[h2] consume %zu bytes -> %lld\n", len, (long long)rc);
+    fprintf(stderr, "[h2][%s] consume %zu bytes -> %lld\n",
+            impl_->role == Role::kServer ? "server" : "client", len,
+            (long long)rc);
   }
   impl_->FlushOut();
 }

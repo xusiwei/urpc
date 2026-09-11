@@ -1,4 +1,4 @@
-# examples/echo — end-to-end example (server + client + shared proto).
+# examples/echo - end-to-end example (server + client + shared proto).
 # Also builds the upb codegen used by api-layer tests and the interop peers.
 
 # --- upb codegen for echo.proto (C++) ----------------------------------------
@@ -12,11 +12,17 @@ urpc_proto_upb(
 
 add_library(urpc_echo_proto STATIC
   "${URPC_ECHO_GEN_DIR}/echo.upb.c"
-  "${URPC_ECHO_GEN_DIR}/echo.upb_minitable.c")
+  "${URPC_ECHO_GEN_DIR}/echo.upb_minitable.c"
+  "${URPC_ECHO_GEN_DIR}/echo.service.cc")
 target_include_directories(urpc_echo_proto PUBLIC
   "${URPC_ECHO_GEN_DIR}"
   "${CMAKE_CURRENT_SOURCE_DIR}")
 target_link_libraries(urpc_echo_proto PRIVATE urpc_upb)
+# The generated service header (echo.service.h) consumes api-layer types;
+# propagate urpc_api to every consumer of urpc_echo_proto (spec 003).
+target_link_libraries(urpc_echo_proto PUBLIC urpc_api)
+set_target_properties(urpc_echo_proto PROPERTIES
+  URPC_SERVICE_HEADER "${URPC_ECHO_GEN_DIR}/echo.service.h")
 
 # --- example binaries (US3) ----------------------------------------------------
 if(URPC_BUILD_EXAMPLES)

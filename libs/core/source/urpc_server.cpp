@@ -2,6 +2,8 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -152,6 +154,9 @@ struct Server::Impl::Conn : public H2Session::Handler {
   }
 
   void OnWrite(const uint8_t* data, size_t len) override {
+    if (getenv("URPC_WIRE_DEBUG"))
+      fprintf(stderr, "[srv] OnWrite %zu bytes socket=%p closed=%d\n", len,
+              (void*)socket, (int)closed);
     if (socket == nullptr || closed) return;
     auto* req = new uv_write_t();
     auto* copy = new char[len];
@@ -166,9 +171,15 @@ struct Server::Impl::Conn : public H2Session::Handler {
     if (it == calls.end() || it->second.request_done) return;
     Call& call = it->second;
     call.request_done = true;
+    if (getenv("URPC_WIRE_DEBUG"))
+      fprintf(stderr, "[srv] FinishRequest sid=%d path=%s ms=%llu\n", (int)sid,
+              call.path.c_str(),
+              (unsigned long long)server->impl_->loop->NowMs());
 
     auto handler = server->impl_->router->Find(call.path);
     if (!handler.has_value()) {
+      if (getenv("URPC_WIRE_DEBUG"))
+        fprintf(stderr, "[srv] no handler for %s\n", call.path.c_str());
       TrailersOnly(sid, StatusCode::kUnimplemented,
                    "unknown method: " + call.path);
       return;
@@ -185,6 +196,8 @@ struct Server::Impl::Conn : public H2Session::Handler {
     auto ctx = std::make_unique<Ctx>(this, sid);
     Ctx* raw = ctx.get();
     ctxs[sid] = std::move(ctx);
+    if (getenv("URPC_WIRE_DEBUG"))
+      fprintf(stderr, "[srv] dispatch sid=%d\n", (int)sid);
     (*handler)(*raw, request);
   }
 
@@ -212,6 +225,9 @@ struct Server::Impl::Conn : public H2Session::Handler {
   }
 
   void TrailersOnly(int32_t sid, StatusCode code, const std::string& msg) {
+    if (getenv("URPC_WIRE_DEBUG"))
+      fprintf(stderr, "[srv] TrailersOnly sid=%d code=%d\n", (int)sid,
+              (int)code);
     auto it = calls.find(sid);
     if (it != calls.end()) {
       if (it->second.responded) return;

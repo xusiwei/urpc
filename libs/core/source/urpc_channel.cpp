@@ -155,16 +155,18 @@ struct Channel::Impl : public H2Session::Handler {
       call.timeout_timer = 0;
     }
     if (call.sid != 0) by_stream.erase(call.sid);
-    URPC_DBG("complete call=%llu sid=%d status=%d", (unsigned long long)call.id,
-             (int)call.sid, (int)status.code());
+    URPC_DBG("complete call=%llu sid=%d status=%d ms=%llu",
+             (unsigned long long)call.id, (int)call.sid, (int)status.code(),
+             (unsigned long long)loop->NowMs());
     auto done = std::move(call.done);  // move out BEFORE erasing the entry
     calls.erase(call.id);
     if (done) done(status, std::move(payload));
   }
 
   void CallNow(const std::string& path, const std::string& framed, Call call) {
-    URPC_DBG("submit call=%llu path=%s bytes=%zu",
-             (unsigned long long)call.id, path.c_str(), framed.size());
+    URPC_DBG("submit call=%llu path=%s bytes=%zu ms=%llu",
+             (unsigned long long)call.id, path.c_str(), framed.size(),
+             (unsigned long long)loop->NowMs());
     int32_t sid = session->SubmitRequest(
         {{":method", "POST"},
          {":scheme", "http"},
@@ -292,8 +294,9 @@ uint64_t Channel::Call(const std::string& path,
         if (it == impl_->calls.end()) return;
         Impl::Call& c = it->second;
         if (c.completed) return;
-        URPC_DBG("timeout fired call=%llu sid=%d", (unsigned long long)id,
-                 (int)c.sid);
+        URPC_DBG("timeout fired call=%llu sid=%d ms=%llu",
+                 (unsigned long long)id, (int)c.sid,
+                 (unsigned long long)impl_->loop->NowMs());
         c.completed = true;
         if (c.sid != 0 && impl_->session) {
           impl_->session->ResetStream(c.sid, kH2Cancel);

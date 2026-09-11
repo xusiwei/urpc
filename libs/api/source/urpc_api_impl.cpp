@@ -6,6 +6,7 @@
 #include "urpc/detail/raw.h"
 #include "urpc/unary.h"
 
+#include <atomic>
 #include <cstdio>
 #include <cstdlib>
 #include <future>
@@ -94,6 +95,7 @@ class Channel::Impl {
   core::LoopRunner loop;
   std::unique_ptr<core::Channel> channel;
   Options options;
+  std::atomic<bool> closed{false};
 };
 
 Channel::Channel() : impl_(std::make_unique<Impl>()) {}
@@ -117,6 +119,14 @@ std::shared_ptr<Channel> Channel::Connect(const std::string& target) {
           target, c->impl_->options.max_receive_message_size});
   return c;
 }
+
+void Channel::Close() {
+  if (impl_->closed.exchange(true)) return;  // idempotent
+  impl_->channel.reset();                    // core dtor stops its loop
+  impl_->loop.Stop();
+}
+
+bool Channel::closed() const { return impl_->closed.load(); }
 
 void Channel::set_max_receive_message_size(size_t n) {
   impl_->options.max_receive_message_size = n;
