@@ -161,10 +161,24 @@ uint16_t TcpListener::bound_port() const {
   return ntohs(reinterpret_cast<const sockaddr_in*>(&ss)->sin_port);
 }
 
-void TcpListener::Close() {
-  if (loop_ == nullptr) return;
+void TcpListener::OnClosedTramp(uv_handle_t* handle) {
+  // Runs on the loop thread after the handle is fully closed.
+  auto* self = static_cast<TcpListener*>(handle->data);
+  if (self->on_closed_) {
+    auto cb = std::move(self->on_closed_);
+    self->on_closed_ = nullptr;
+    cb();
+  }
+}
+
+void TcpListener::Close(std::function<void()> on_closed) {
+  if (loop_ == nullptr) {
+    if (on_closed) on_closed();  // already closed: complete immediately
+    return;
+  }
+  on_closed_ = std::move(on_closed);
   if (!uv_is_closing(reinterpret_cast<uv_handle_t*>(&handle_))) {
-    uv_close(reinterpret_cast<uv_handle_t*>(&handle_), nullptr);
+    uv_close(reinterpret_cast<uv_handle_t*>(&handle_), &TcpListener::OnClosedTramp);
   }
   loop_ = nullptr;
 }

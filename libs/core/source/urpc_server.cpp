@@ -309,21 +309,39 @@ uint64_t Server::Impl::RemainingMsOf(uint64_t timer_id) const {
 }
 
 void Server::Impl::OnConnIdle() {
-  std::lock_guard<std::mutex> lock(mu);
-  for (auto it = conns.begin(); it != conns.end();) {
-    if ((*it)->closed) {
-      it = conns.erase(it);
-    } else {
-      ++it;
+  std::function<void()> close_listener;
+  {
+    std::lock_guard<std::mutex> lock(mu);
+    for (auto it = conns.begin(); it != conns.end();) {
+      if ((*it)->closed) {
+        it = conns.erase(it);
+      } else {
+        ++it;
+      }
+    }
+    // Last connection finished during shutdown: close the listener too
+    // (same loop thread) and complete the drain handshake in its close
+    // callback — the handle must be fully closed before ~TcpListener.
+    if (shutdown_requested && conns.empty() && !drained && listening) {
+      listening = false;
+      close_listener = [this]() {
+        listener->Close([this]() {
+          std::lock_guard<std::mutex> lk(mu);
+          if (!drained) {
+            drained = true;
+            cv.notify_all();
+          }
+        });
+      };
     }
   }
-  if (shutdown_requested && conns.empty() && !drained) {
-    drained = true;
-    cv.notify_all();
-  }
+  if (close_listener) close_listener();
 }
 
 void Server::Impl::FinishShutdown() {
+  if (getenv("URPC_WIRE_DEBUG"))
+    std::fprintf(stderr, "[dbg] FinishShutdown begin\n");
+  std::function<void()> close_listener;
   {
     std::lock_guard<std::mutex> lock(mu);
     if (drained) return;
@@ -338,9 +356,25 @@ void Server::Impl::FinishShutdown() {
       }
     }
     conns.clear();
-    drained = true;
+    if (listening) {
+      // close listener on this (loop) thread; drain completes in its
+      // close callback so the handle is fully released before teardown
+      listening = false;
+      close_listener = [this]() {
+        listener->Close([this]() {
+          std::lock_guard<std::mutex> lk(mu);
+          if (!drained) {
+            drained = true;
+            cv.notify_all();
+          }
+        });
+      };
+    } else {
+      drained = true;
+      cv.notify_all();
+    }
   }
-  cv.notify_all();
+  if (close_listener) close_listener();
   log::Info(log::LogCategory::kConnection, "server_stopped",
             "address=" + options.address);
 }
@@ -422,19 +456,26 @@ void Server::Shutdown() {
     return;
   }
   impl_->shutdown_requested = true;
-  if (impl_->listening) {
-    impl_->loop->Post([listener = impl_->listener.get()] { listener->Close(); });
-    impl_->listening = false;
-  }
-  if (impl_->conns.empty()) {
-    impl_->drained = true;
-    impl_->cv.notify_all();
-    return;
-  }
-  // Graceful drain (FR-012): connections with no in-flight calls close
-  // immediately; the grace window protects in-flight work only.
+  if (getenv("URPC_WIRE_DEBUG"))
+    std::fprintf(stderr, "[dbg] Server::Shutdown begin (conns=%zu)\n",
+                 impl_->conns.size());
+  // All uv handle/timer operations below must run on the loop thread;
+  // Shutdown() itself may be called from any thread. drained is set only
+  // after the listener handle is FULLY closed (uv_close is async — the
+  // handle memory must stay alive until the close callback ran), so the
+  // later ~TcpListener (any thread) finds loop_ == nullptr and the uv
+  // loop no longer references it.
   impl_->loop->Post([this] {
     std::lock_guard<std::mutex> lk(impl_->mu);
+    auto finish = [this]() {
+      std::lock_guard<std::mutex> lk2(impl_->mu);
+      if (!impl_->drained) {
+        impl_->drained = true;
+        impl_->cv.notify_all();
+      }
+    };
+    // Graceful drain (FR-012): connections with no in-flight calls close
+    // immediately; the grace window protects in-flight work only.
     for (auto it = impl_->conns.begin(); it != impl_->conns.end();) {
       if ((*it)->calls.empty()) {
         (*it)->closed = true;
@@ -447,14 +488,28 @@ void Server::Shutdown() {
         ++it;
       }
     }
-    if (impl_->conns.empty() && !impl_->drained) {
-      impl_->drained = true;
-      impl_->cv.notify_all();
+    if (!impl_->conns.empty()) {
+      // in-flight work remains: arm the grace timer, drain completes when
+      // the last conn goes idle or the grace timer fires
+      const uint64_t grace = impl_->options.shutdown_grace_ms;
+      if (getenv("URPC_WIRE_DEBUG"))
+        std::fprintf(stderr, "[dbg] Shutdown: arming grace timer (%llums)\n",
+                     (unsigned long long)grace);
+      impl_->loop->SetTimer(grace, [this] { impl_->FinishShutdown(); });
+      return;
     }
+    if (impl_->listening) {
+      impl_->listening = false;
+      // conn set already empty: close listener and complete on its close
+      // callback (loop thread) so the handle is fully released first
+      impl_->listener->Close([finish]() { finish(); });
+      return;
+    }
+    finish();
   });
-  const uint64_t grace = impl_->options.shutdown_grace_ms;
-  impl_->loop->SetTimer(grace, [this] { impl_->FinishShutdown(); });
   impl_->cv.wait(lock, [this] { return impl_->drained; });
+  if (getenv("URPC_WIRE_DEBUG"))
+    std::fprintf(stderr, "[dbg] Server::Shutdown done (drained)\n");
 }
 
 void Server::Wait() {

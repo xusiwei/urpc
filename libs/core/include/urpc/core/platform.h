@@ -34,18 +34,23 @@ class TcpListener {
   TcpListener& operator=(const TcpListener&) = delete;
 
   Status BindAndListen(uv_loop_t* loop, const std::string& address,
-                       AcceptCallback on_accept, int backlog = 128);
-  void Close();  // idempotent; must run on the loop thread
+                      AcceptCallback on_accept, int backlog = 128);
+  // Idempotent; must run on the loop thread. `on_closed` (optional) fires
+  // on the loop thread once the handle is fully closed — the object must
+  // outlive until then (uv_close is asynchronous).
+  void Close(std::function<void()> on_closed = nullptr);
 
   // Port actually bound (useful with port 0); 0 when not bound.
   uint16_t bound_port() const;
 
  private:
   static void OnConnection(uv_stream_t* server, int status);
+  static void OnClosedTramp(uv_handle_t* handle);
 
   uv_tcp_t handle_{};
   uv_loop_t* loop_ = nullptr;
   AcceptCallback on_accept_;
+  std::function<void()> on_closed_;  // set by Close(); one-shot
 };
 
 }  // namespace platform

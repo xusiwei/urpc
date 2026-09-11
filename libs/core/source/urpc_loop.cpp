@@ -79,6 +79,9 @@ void LoopRunner::Post(Task fn) {
 }
 
 void LoopRunner::CloseAllHandlesOnLoop() {
+  if (getenv("URPC_WIRE_DEBUG"))
+    std::fprintf(stderr, "[dbg] CloseAllHandlesOnLoop: timers=%zu\n",
+                 timers_.size());
   for (auto& [id, ctx] : timers_) {
     uv_timer_stop(&ctx->handle);
     uv_close(reinterpret_cast<uv_handle_t*>(&ctx->handle),
@@ -93,9 +96,17 @@ void LoopRunner::CloseAllHandlesOnLoop() {
   // forgot to close): without this uv_run would never return.
   uv_walk(&loop_,
           [](uv_handle_t* h, void*) {
+            if (getenv("URPC_WIRE_DEBUG"))
+              std::fprintf(stderr,
+                           "[dbg] CloseAll: walk type=%s active=%d "
+                           "closing=%d\n",
+                           uv_handle_type_name(uv_handle_get_type(h)),
+                           (int)uv_is_active(h), (int)uv_is_closing(h));
             if (!uv_is_closing(h)) uv_close(h, nullptr);
           },
           nullptr);
+  if (getenv("URPC_WIRE_DEBUG"))
+    std::fprintf(stderr, "[dbg] CloseAllHandlesOnLoop: done\n");
 }
 
 void LoopRunner::Stop() {
@@ -114,6 +125,8 @@ void LoopRunner::Stop() {
       !uv_is_closing(reinterpret_cast<uv_handle_t*>(&wake_))) {
     uv_async_send(&wake_);
   }
+  if (getenv("URPC_WIRE_DEBUG"))
+    std::fprintf(stderr, "[dbg] Stop: about to join/detach\n");
   if (thread_.joinable()) {
     if (OnLoopThread()) {
       if (getenv("URPC_WIRE_DEBUG"))
@@ -123,6 +136,8 @@ void LoopRunner::Stop() {
       thread_.detach();
     } else {
       thread_.join();
+      if (getenv("URPC_WIRE_DEBUG"))
+        std::fprintf(stderr, "[dbg] Stop: joined\n");
     }
   }
   if (!OnLoopThread()) {

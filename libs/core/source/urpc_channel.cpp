@@ -1,6 +1,8 @@
 #include "urpc/core/channel.h"
 
 #include <atomic>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -19,6 +21,17 @@ namespace core {
 namespace {
 constexpr const char* kContentType = "application/grpc";
 constexpr uint32_t kH2Cancel = 0x8;
+
+// Debug logging helper (existing repo convention: URPC_WIRE_DEBUG env var).
+inline bool WireDebug() { return getenv("URPC_WIRE_DEBUG") != nullptr; }
+#define URPC_DBG(...)                          \
+  do {                                         \
+    if (WireDebug()) {                         \
+      std::fprintf(stderr, "[ch] ");           \
+      std::fprintf(stderr, __VA_ARGS__);       \
+      std::fprintf(stderr, "\n");              \
+    }                                          \
+  } while (0)
 
 void UvAlloc(uv_handle_t*, size_t suggested, uv_buf_t* buf) {
   buf->base = new char[suggested];
@@ -142,12 +155,16 @@ struct Channel::Impl : public H2Session::Handler {
       call.timeout_timer = 0;
     }
     if (call.sid != 0) by_stream.erase(call.sid);
+    URPC_DBG("complete call=%llu sid=%d status=%d", (unsigned long long)call.id,
+             (int)call.sid, (int)status.code());
     auto done = std::move(call.done);  // move out BEFORE erasing the entry
     calls.erase(call.id);
     if (done) done(status, std::move(payload));
   }
 
   void CallNow(const std::string& path, const std::string& framed, Call call) {
+    URPC_DBG("submit call=%llu path=%s bytes=%zu",
+             (unsigned long long)call.id, path.c_str(), framed.size());
     int32_t sid = session->SubmitRequest(
         {{":method", "POST"},
          {":scheme", "http"},
@@ -184,16 +201,19 @@ struct Channel::Impl : public H2Session::Handler {
 
   void ConnectNow() {
     state = State::kConnecting;
+    URPC_DBG("connecting address=%s", options.address.c_str());
     platform::TcpConnect(
         loop->loop(), options.address,
         [this](Status st, uv_stream_t* stream) {
           if (!st.ok()) {
             state = State::kBroken;
+            URPC_DBG("connect failed: %s", st.message().c_str());
             log::Warn(log::LogCategory::kConnection, "channel_connect_failed",
                       "address=" + options.address + " err=" + st.message());
             FailPending(st);
             return;
           }
+          URPC_DBG("connected");
           socket = reinterpret_cast<uv_tcp_t*>(stream);
           socket->data = this;
           session = std::make_unique<H2Session>(H2Session::Role::kClient, this);
@@ -224,6 +244,7 @@ struct Channel::Impl : public H2Session::Handler {
   void OnConnectionLost() {
     if (state == State::kBroken) return;
     state = State::kBroken;
+    URPC_DBG("connection lost");
     if (socket != nullptr) {
       uv_close(reinterpret_cast<uv_handle_t*>(socket), nullptr);
       socket = nullptr;
@@ -271,6 +292,8 @@ uint64_t Channel::Call(const std::string& path,
         if (it == impl_->calls.end()) return;
         Impl::Call& c = it->second;
         if (c.completed) return;
+        URPC_DBG("timeout fired call=%llu sid=%d", (unsigned long long)id,
+                 (int)c.sid);
         c.completed = true;
         if (c.sid != 0 && impl_->session) {
           impl_->session->ResetStream(c.sid, kH2Cancel);
