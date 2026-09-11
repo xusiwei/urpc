@@ -1,6 +1,10 @@
 #include "urpc/core/platform.h"
 
-#include <arpa/inet.h>
+#ifdef _WIN32
+#include <winsock2.h>  // ntohs (sockaddr types already come via uv.h)
+#else
+#include <arpa/inet.h>  // ntohs
+#endif
 #include <cstring>
 #include <string>
 

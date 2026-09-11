@@ -122,14 +122,6 @@ nghttp2_ssize BodyRead2(nghttp2_session* session, int32_t stream_id,
   return static_cast<nghttp2_ssize>(chunk);
 }
 
-ssize_t BodyRead1(nghttp2_session* session, int32_t stream_id, uint8_t* buf,
-                  size_t length, uint32_t* data_flags,
-                  nghttp2_data_source* source, void* user_data) {
-  return static_cast<ssize_t>(
-      BodyRead2(session, stream_id, buf, length, data_flags, source,
-                user_data));
-}
-
 }  // namespace
 
 H2Session::H2Session(Role role, Handler* handler) : impl_(new Impl()) {
@@ -227,13 +219,13 @@ void H2Session::SendData(int32_t stream_id, const std::string& data,
   auto pending = std::make_shared<PendingBody>();
   pending->data = data;
   impl_->pending_bodies[stream_id] = pending;
-  nghttp2_data_provider dp{};
+  nghttp2_data_provider2 dp{};
   dp.source.ptr = pending.get();
-  dp.read_callback = &BodyRead1;
-  nghttp2_submit_data(impl_->session,
-                      end_stream ? NGHTTP2_FLAG_END_STREAM
-                                 : NGHTTP2_FLAG_NONE,
-                      stream_id, &dp);
+  dp.read_callback = &BodyRead2;
+  nghttp2_submit_data2(impl_->session,
+                       end_stream ? NGHTTP2_FLAG_END_STREAM
+                                  : NGHTTP2_FLAG_NONE,
+                       stream_id, &dp);
   impl_->FlushOut();
 }
 

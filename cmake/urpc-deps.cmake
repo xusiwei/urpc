@@ -42,6 +42,13 @@ function(urpc_tp_require NAME)
 endfunction()
 
 # ---------------------------------------------------------------------------
+# MSVC CRT policy (fixes Windows CI): every third-party subproject and urpc
+# itself must use the same dynamic CRT (/MD, MultiThreadedDLL). protobuf's
+# static build defaults to /MT (protobuf_MSVC_STATIC_RUNTIME=ON), which
+# clashes with abseil's /MD default and fails protoc-gen-upb with LNK2038.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+
+# ---------------------------------------------------------------------------
 # libuv
 # ---------------------------------------------------------------------------
 urpc_tp_require(libuv)
@@ -74,6 +81,11 @@ if(TARGET nghttp2_static)
 else()
   set(URPC_NGHTTP2_TARGET nghttp2)
 endif()
+# MSVC has no POSIX ssize_t; defining this crops the deprecated ssize_t-based
+# API surface out of the public header (all *2 variants stay visible; urpc
+# uses only those — see lib/includes/nghttp2/nghttp2.h).
+target_compile_definitions(${URPC_NGHTTP2_TARGET}
+  PUBLIC NGHTTP2_NO_SSIZE_T)
 
 # ---------------------------------------------------------------------------
 # upb runtime (C subset of the vendored protobuf tree; no abseil,
@@ -113,6 +125,9 @@ urpc_tp_require(abseil)
 set(ABSL_ENABLE_TESTING OFF CACHE INTERNAL "")
 set(ABSL_PROPAGATE_CXX_STD ON CACHE INTERNAL "")
 set(ABSL_BUILD_MONOLITHIC_CPP_LIB OFF CACHE INTERNAL "")
+# keep abseil on the dynamic CRT (/MD) — matches protobuf below; MSVC refuses
+# to link /MT and /MD objects together (LNK2038)
+set(ABSL_MSVC_STATIC_RUNTIME OFF CACHE INTERNAL "")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party/abseil"
                  "${CMAKE_BINARY_DIR}/third_party/abseil")
 
@@ -124,6 +139,10 @@ set(protobuf_BUILD_LIBUPB ON CACHE INTERNAL "")  # builds the upb codegen plugin
 set(protobuf_DISABLE_RTTI ON CACHE INTERNAL "")
 set(protobuf_WITH_ZLIB OFF CACHE INTERNAL "")
 set(protobuf_BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+# protobuf defaults protobuf_MSVC_STATIC_RUNTIME to ON for static builds,
+# which compiles its objects to /MT against abseil's /MD — link fails with
+# LNK2038 on protoc-gen-upb. Pin it to the dynamic CRT like everything else.
+set(protobuf_MSVC_STATIC_RUNTIME OFF CACHE INTERNAL "")
 set(utf8_range_ENABLE_TESTS OFF CACHE INTERNAL "")
 set(utf8_range_ENABLE_INSTALL OFF CACHE INTERNAL "")
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/third_party/protobuf"
